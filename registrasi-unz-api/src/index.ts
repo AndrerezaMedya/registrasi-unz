@@ -600,6 +600,7 @@ if(load()){ els.loginBox.style.display='none'; els.dataBox.style.display='flex';
   }
 } satisfies ExportedHandler<Env>;
 
+// eslint-disable-next-line import/no-unresolved
 export { CheckinHub } from './do/CheckinHub';
 
 async function fetchSheetValues(env: Env): Promise<any[][]> {
