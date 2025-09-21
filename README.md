@@ -1,6 +1,6 @@
 # Registrasi UNZ – Sistem Tiket & Check-in
 
-![License](https://img.shields.io/badge/license-MIT-blue.svg)
+![License](https://img.shields.io/badge/license-MIT-blue.svg) ![CI](https://github.com/AndrerezaMedya/registrasi-unz/actions/workflows/ci.yml/badge.svg)
 
 Sistem ini memfasilitasi distribusi kode tiket, pembuatan QR, dan proses check‑in peserta acara. Infrastruktur utama dibangun di atas **Cloudflare Workers + D1 Database** dengan beberapa utilitas tambahan (Python scripts untuk generate kode & QR). Proyek juga memiliki fallback dashboard statis dan mode pembekuan (read‑only) setelah acara selesai.
 
@@ -24,6 +24,8 @@ Sistem ini memfasilitasi distribusi kode tiket, pembuatan QR, dan proses check�
 
 ---
 ## Arsitektur Ringkas
+(Lihat juga: [Diagram Arsitektur](./docs/ARCHITECTURE.md))
+
 Komponen utama:
 - **Cloudflare Worker (`registrasi-unz-api`)**: Endpoint otentikasi, validasi, update status tiket, statistik, listing peserta.
 - **D1 (SQLite managed)**: Tabel `tickets` & `logs`.

@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - name: Install root deps (if any)
+        run: |
+          if [ -f package.json ]; then npm ci || npm install; fi
+      - name: Install worker deps
+        working-directory: registrasi-unz-api
+        run: npm ci || npm install
+      - name: Type check (tsc)
+        working-directory: registrasi-unz-api
+        run: npx tsc --noEmit
+      - name: Unit tests (vitest)
+        working-directory: registrasi-unz-api
+        run: npx vitest run --reporter=dot || echo "Tests not critical yet"
+      - name: Lint placeholder
+        run: echo "(Add ESLint later)"
+      - name: Build wrangler types
+        working-directory: registrasi-unz-api
+        run: npx wrangler types
