@@ -68,8 +68,4 @@ export class CheckinHub implements DurableObject {
   }
 }
 
-export default {
-  fetch: (request: Request, env: Env, ctx: ExecutionContext) => {
-    return new Response('Direct DO access root', { status: 404 });
-  },
-};
+export default CheckinHub;

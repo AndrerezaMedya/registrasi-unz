@@ -1,26 +1,7 @@
-/**
- * Welcome to Cloudflare Workers! This is your first worker.
- *
- * - Run `npm run dev` in your terminal to start a development server
- * - Open a browser tab at http://localhost:8787/ to see your worker in action
- * - Run `npm run deploy` to publish your worker
- *
- * Bind resources to your worker in `wrangler.jsonc`. After adding bindings, a type definition for the
- * `Env` object can be regenerated with `npm run cf-typegen`.
- *
- * Learn more at https://developers.cloudflare.com/workers/
- */
+import { TicketRow, Env } from './types';
+import { jsonResponse, stdError, getIP, handleCorsPreflight, readBody, readJsonLoose, DebounceMap } from './utils';
 
-interface TicketRow {
-  id?: number;
-  name: string;
-  email: string;
-  wa?: string | null;
-  code: string;
-  used: number;
-  used_at?: string | null;
-  qr_url?: string | null;
-}
+// Existing code...
 
 // Simple token bucket per IP
 class RateLimiter {
@@ -42,65 +23,7 @@ class RateLimiter {
   }
 }
 
-// Debounce / duplicate fast submissions (500ms window)
-class DebounceMap {
-  private map = new Map<string, number>();
-  constructor(private ttlMs: number) {}
-  check(code: string): boolean {
-    const now = Date.now();
-    const prev = this.map.get(code);
-    if (prev && now - prev < this.ttlMs) return false; // reject
-    this.map.set(code, now);
-    return true;
-  }
-}
-
-function jsonResponse(obj: any, status = 200, corsOrigin?: string) {
-  return new Response(JSON.stringify(obj), {
-    status,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(corsOrigin ? { 'Access-Control-Allow-Origin': corsOrigin, 'Vary': 'Origin' } : {}),
-    },
-  });
-}
-
-// Unified error shape helper
-function stdError(code: string, message?: string, extra?: Record<string, any>, status: number = 400, corsOrigin?: string) {
-  const body = { ok: false, code, error: code, message: message || code, ts: new Date().toISOString(), ...(extra || {}) };
-  return jsonResponse(body, status, corsOrigin);
-}
-
-async function readBody<T>(req: Request): Promise<T | null> {
-  try { return await req.json<T>(); } catch { return null; }
-}
-
-// More permissive body parser used for /login to mitigate some curl.exe/PowerShell edge cases
-async function readJsonLoose(req: Request): Promise<any> {
-  // Clone because other helpers might want to read body later (defensive)
-  const clone = req.clone();
-  try {
-    return await clone.json();
-  } catch {
-    // Fallback: read text and attempt JSON / form decoding
-    try {
-      const txt = await clone.text();
-      if (!txt) return null;
-      // Try JSON again (maybe minor BOM)
-      try { return JSON.parse(txt); } catch {}
-      // Try key=value&key2=value2
-      if (txt.includes('=') && !txt.includes('{')) {
-        const obj: Record<string,string> = {};
-        for (const part of txt.split('&')) {
-          const [k,v] = part.split('=');
-            if (k) obj[decodeURIComponent(k)] = decodeURIComponent(v||'');
-        }
-        return obj;
-      }
-      return null;
-    } catch { return null; }
-  }
-}
+// (stdError, readBody, readJsonLoose moved to utils.ts)
 
 const rateLimiter = new RateLimiter(5, 5); // 5 req capacity, refill 5/s
 const debounce = new DebounceMap(500);
@@ -133,29 +56,9 @@ async function handleMarkUsed(code: string, admin_id: string, env: Env) {
   return { status: 500, body: { ok: false, error: 'DB_ERROR' } };
 }
 
-function getIP(req: Request): string { return req.headers.get('CF-Connecting-IP') || '0.0.0.0'; }
+// getIP moved to utils.ts
 
-function handleCorsPreflight(req: Request, corsOrigin: string) {
-  if (req.method === 'OPTIONS') {
-    const reqHeaders = req.headers.get('Access-Control-Request-Headers') || '';
-    // Include Authorization so browser will allow Bearer tokens from gate/monitor frontend
-    return new Response(null, { status: 204, headers: { 'Access-Control-Allow-Origin': corsOrigin, 'Access-Control-Allow-Methods': 'POST,GET,OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type,Authorization,x-gate-key', 'Access-Control-Max-Age': '86400' } });
-  }
-  return null;
-}
-
-interface Env {
-  DB: D1Database;
-  CHECKIN_HUB: DurableObjectNamespace;
-  CORS_ORIGIN: string;
-  GATE_API_KEY: string;
-  GATE_JWT_SECRET: string;
-  SHEET_ID: string;
-  SHEET_NAME: string;
-  SHEETS_SA_EMAIL: string;
-  SHEETS_SA_KEY: string;
-  EVENT_CLOSED?: string; // '1' when event frozen (read-only)
-}
+// (handleCorsPreflight and Env moved to utils/types modules)
 
 // ================= JWT & Auth Helpers =================
 interface AdminRow { id: string; username: string; password_hash: string; name: string; role?: string; }
@@ -600,8 +503,7 @@ if(load()){ els.loginBox.style.display='none'; els.dataBox.style.display='flex';
   }
 } satisfies ExportedHandler<Env>;
 
-// eslint-disable-next-line import/no-unresolved
-export { CheckinHub } from './do/CheckinHub';
+import CheckinHub from './do/CheckinHub';
 
 async function fetchSheetValues(env: Env): Promise<any[][]> {
   // We support two secret formats for SHEETS_SA_KEY:
@@ -773,3 +675,5 @@ async function upsertRows(values: any[][], env: Env) {
   }
   return { inserted, updated };
 }
+
+// End of helper functions

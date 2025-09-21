@@ -18,6 +18,11 @@ export default [
       'coverage/**',
       '**/*.d.ts'
     ],
+    settings: {
+      'import/resolver': {
+        typescript: { project: ['./tsconfig.json'] }
+      }
+    },
     languageOptions: {
       parser: tsParser,
       parserOptions: {
