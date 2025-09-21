@@ -1,5 +1,7 @@
 # Registrasi UNZ – Sistem Tiket & Check-in
 
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
+
 Sistem ini memfasilitasi distribusi kode tiket, pembuatan QR, dan proses check‑in peserta acara. Infrastruktur utama dibangun di atas **Cloudflare Workers + D1 Database** dengan beberapa utilitas tambahan (Python scripts untuk generate kode & QR). Proyek juga memiliki fallback dashboard statis dan mode pembekuan (read‑only) setelah acara selesai.
 
 ---
@@ -252,7 +254,11 @@ npm test
 
 ---
 ## Lisensi / Catatan Internal
-Proyek internal acara. Tidak ada lisensi publik eksplisit. Jaga kerahasiaan secret & HMAC key.
+Lisensi: [MIT](./LICENSE)
+
+Catatan internal:
+- Pastikan secret tidak pernah di-commit.
+- File credential service account harus disimpan terpisah / secret manager.
 
 ---
 ## Kontak / Pemeliharaan
