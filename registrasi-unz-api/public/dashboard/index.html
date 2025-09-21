@@ -1,0 +1,96 @@
+<!DOCTYPE html><html lang="id"><head><meta charset="utf-8" />
+<title>Dashboard Check-in</title><meta name="viewport" content="width=device-width,initial-scale=1" />
+<link rel="icon" href="data:,">
+<style>body{font-family:system-ui,Arial,sans-serif;margin:0;background:#101416;color:#e8e8e8}
+header{background:#182028;padding:10px 16px;display:flex;flex-wrap:wrap;align-items:center;gap:12px}
+h1{font-size:1.1rem;margin:0;font-weight:600;letter-spacing:.5px}
+button,input{font:inherit}input[type=text],input[type=password]{padding:6px 8px;border:1px solid #334;border-radius:4px;background:#121a22;color:#eee}
+button{padding:6px 12px;border:1px solid #2d5575;border-radius:4px;background:#25649a;color:#fff;cursor:pointer;font-weight:600}
+button.secondary{background:#303b44;border-color:#3d4b58}
+#loginBox{display:flex;gap:6px}#dataBox{display:none;flex-direction:column;gap:10px;width:100%}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+footer{padding:10px 14px;font-size:.65rem;opacity:.6}
+.pill{background:#243544;padding:2px 6px;border-radius:12px;font-size:.65rem}
+.flex{display:flex;align-items:center;gap:6px}
+.status{font-size:.7rem;margin-left:auto;padding:4px 8px;border-radius:4px;background:#222}
+.ok{background:#0f4d2f}.warn{background:#614d12}.err{background:#6b1d1d}
+.tableWrap{overflow:auto;max-height:70vh;border:1px solid #223;border-radius:6px}
+#tbl{width:100%;border-collapse:collapse;font-size:.78rem}
+#tbl th,#tbl td{padding:6px 8px;border-bottom:1px solid #223;text-align:left}
+#tbl th{background:#182028;position:sticky;top:0}
+tbody tr:nth-child(even){background:#151b21}tbody tr:hover{background:#1e2831}
+</style></head><body>
+<header>
+  <h1>Dashboard Check-in</h1>
+  <div id="frozenBadge" style="display:none;font-size:.65rem;background:#5a2a2a;padding:4px 8px;border-radius:4px;letter-spacing:.5px">EVENT FROZEN / READ-ONLY</div>
+  <div id="loginBox">
+    <input id="user" placeholder="username" autocomplete="username" />
+    <input id="pass" type="password" placeholder="password" autocomplete="current-password" />
+    <button id="loginBtn">Masuk</button>
+  </div>
+  <div id="sessionBox" style="display:none;gap:8px;align-items:center">
+    <span id="sessInfo" class="pill"></span>
+    <button id="logoutBtn" class="secondary">Keluar</button>
+  </div>
+  <div id="status" class="status">idle</div>
+</header>
+<main style="padding:12px 14px;display:flex;flex-direction:column;gap:14px;">
+  <div id="dataBox">
+    <div class="bar">
+      <div class="flex" style="gap:4px">
+        <input id="search" placeholder="Cari kode / nama / email" style="min-width:220px" />
+        <button id="searchBtn">Cari</button>
+        <button id="clearBtn" class="secondary">Reset</button>
+      </div>
+      <div class="flex" style="margin-left:auto;gap:4px">
+        <button id="modeBtn" class="secondary" title="Tampilkan belum check-in">Mode: Sudah ✓</button>
+        <button id="refreshBtn" title="Muat ulang (r)">Reload</button>
+        <button id="csvBtn" class="secondary">Export CSV</button>
+      </div>
+    </div>
+    <div style="font-size:.7rem;opacity:.75" id="metaLine">&nbsp;</div>
+    <div class="tableWrap">
+      <table id="tbl"><thead><tr><th style="width:120px">Waktu</th><th>Kode</th><th>Nama</th><th>Email</th><th>WA</th></tr></thead><tbody></tbody></table>
+    </div>
+    <div class="bar">
+      <div class="flex" style="gap:6px">
+        <button id="prevBtn" class="secondary">« Prev</button>
+        <button id="nextBtn" class="secondary">Next »</button>
+        <span id="pageInfo" style="font-size:.7rem;opacity:.7"></span>
+      </div>
+      <label style="font-size:.65rem;opacity:.7">Limit <input id="limit" type="number" value="100" min="10" max="500" style="width:70px" /></label>
+      <label style="font-size:.65rem;opacity:.7">Auto <input id="auto" type="checkbox" checked /></label>
+      <span id="autoInfo" style="font-size:.65rem;opacity:.55">Refresh 15s</span>
+    </div>
+  </div>
+</main>
+<footer>Dashboard sederhana – v1.2 (static fallback)</footer>
+<script>const API_BASE='https://registrasi-unz-api.formsurveyhth.workers.dev';
+let EVENT_CLOSED=false;
+const els={u:document.getElementById('user'),p:document.getElementById('pass'),login:document.getElementById('loginBtn'),status:document.getElementById('status'),tbl:document.querySelector('#tbl tbody'),loginBox:document.getElementById('loginBox'),dataBox:document.getElementById('dataBox'),sess:document.getElementById('sessInfo'),sessBox:document.getElementById('sessionBox'),logout:document.getElementById('logoutBtn'),search:document.getElementById('search'),searchBtn:document.getElementById('searchBtn'),clearBtn:document.getElementById('clearBtn'),refresh:document.getElementById('refreshBtn'),csv:document.getElementById('csvBtn'),prev:document.getElementById('prevBtn'),next:document.getElementById('nextBtn'),pageInfo:document.getElementById('pageInfo'),limit:document.getElementById('limit'),auto:document.getElementById('auto'),autoInfo:document.getElementById('autoInfo'),meta:document.getElementById('metaLine'),modeBtn:document.getElementById('modeBtn')};
+let token=null; let adminId=null; let offset=0; let total=0; let q=''; let timer=null; let showUsed=true; let unusedCache=null;
+function setStatus(t,c){els.status.textContent=t;els.status.className='status '+(c||'');}
+function save(){localStorage.setItem('dashAuth',JSON.stringify({token,adminId}));}
+function load(){try{const j=JSON.parse(localStorage.getItem('dashAuth')); if(j&&j.token){token=j.token;adminId=j.adminId;return true}}catch{} return false;}
+async function login(){if(!els.u.value||!els.p.value)return; setStatus('login...'); const r=await fetch(API_BASE+'/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:els.u.value,password:els.p.value})}); const j=await r.json(); if(j.ok){token=j.token;adminId=j.admin_id;save(); els.loginBox.style.display='none'; els.dataBox.style.display='flex'; els.sessBox.style.display='flex'; els.sess.textContent=adminId; setStatus('OK','ok'); offset=0; loadPage(); autoCycle(); } else { setStatus(j.error||'gagal','err'); }}
+async function loadPage(){ if(!token) return; els.tbl.innerHTML=''; if(!showUsed){ setStatus('memuat semua belum...'); els.prev.disabled=true; els.next.disabled=true; els.limit.disabled=true; const url=new URL(API_BASE+'/participants-unused'); if(q) url.searchParams.set('q',q); const r=await fetch(url.toString(),{headers:{'Authorization':'Bearer '+token}}); if(r.status===401){ setStatus('Sesi habis','warn'); return logout(); } const j=await r.json(); if(!j.ok){ setStatus(j.error||'err','err'); return; } unusedCache=j; total=j.count; for(const row of j.rows){ const tr=document.createElement('tr'); tr.innerHTML='<td></td><td>'+esc(row.code)+'</td><td>'+esc(row.name||'')+'</td><td>'+esc(row.email||'')+'</td><td>'+esc(row.wa||'')+'</td>'; els.tbl.appendChild(tr);} els.pageInfo.textContent='1 / 1'; els.meta.textContent='Total belum: '+j.count + (j.capped? ' (CAP '+j.cap+' tercapai)':''); setStatus('siap'); return; } const limit=parseInt(els.limit.value)||100; els.prev.disabled=false; els.next.disabled=false; els.limit.disabled=false; setStatus('memuat'); const url=new URL(API_BASE+'/participants'); url.searchParams.set('limit',limit); url.searchParams.set('offset',offset); url.searchParams.set('used','1'); if(q) url.searchParams.set('q',q); const r=await fetch(url.toString(),{headers:{'Authorization':'Bearer '+token}}); if(r.status===401){ setStatus('Sesi habis','warn'); return logout(); } const j=await r.json(); if(!j.ok){ setStatus(j.error||'err','err'); return; } total=j.total; for(const row of j.rows){ const tr=document.createElement('tr'); const dt=row.used_at? new Date(row.used_at): null; const tstr= dt? dt.toLocaleString():''; tr.innerHTML='<td>'+tstr+'</td><td>'+esc(row.code)+'</td><td>'+esc(row.name||'')+'</td><td>'+esc(row.email||'')+'</td><td>'+esc(row.wa||'')+'</td>'; els.tbl.appendChild(tr);} const page=Math.floor(offset/limit)+1; const pages=Math.max(1,Math.ceil(total/limit)); els.pageInfo.textContent=page+' / '+pages; els.meta.textContent='Total used: '+total+' | Showing '+j.count; setStatus('siap'); }
+function esc(s){return (s||'').toString().replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));}
+function logout(){token=null;adminId=null;localStorage.removeItem('dashAuth'); els.loginBox.style.display='flex'; els.dataBox.style.display='none'; els.sessBox.style.display='none'; setStatus('logout'); if(timer) clearTimeout(timer); }
+function autoCycle(){ if(!els.auto.checked) return; if(timer) clearTimeout(timer); timer=setTimeout(()=>{ loadPage().then(autoCycle); },15000); }
+els.login.addEventListener('click',login); els.p.addEventListener('keydown',e=>{ if(e.key==='Enter') login(); });
+els.refresh.addEventListener('click',()=>{ loadPage(); });
+els.csv.addEventListener('click',()=>{ if(!token) return; let url; if(showUsed){ url=new URL(API_BASE+'/participants'); url.searchParams.set('limit',els.limit.value||'100'); url.searchParams.set('offset',offset); url.searchParams.set('used','1'); } else { url=new URL(API_BASE+'/participants-unused'); } if(q) url.searchParams.set('q',q); url.searchParams.set('export','csv'); fetch(url.toString(),{headers:{'Authorization':'Bearer '+token}}).then(r=>r.blob()).then(b=>{ const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download= showUsed? 'checked-in.csv':'belum-checkin.csv'; a.click(); }); });
+els.prev.addEventListener('click',()=>{ if(!showUsed) return; const limit=parseInt(els.limit.value)||100; offset=Math.max(0, offset - limit); loadPage(); });
+els.next.addEventListener('click',()=>{ if(!showUsed) return; const limit=parseInt(els.limit.value)||100; if(offset + limit < total){ offset += limit; loadPage(); }});
+els.limit.addEventListener('change',()=>{ if(!showUsed){ els.limit.disabled=true; return;} offset=0; loadPage(); autoCycle(); });
+els.auto.addEventListener('change',()=>{ if(els.auto.checked){ autoCycle(); } else if(timer){ clearTimeout(timer); }});
+els.logout.addEventListener('click',logout);
+els.searchBtn.addEventListener('click',()=>{ q=els.search.value.trim(); offset=0; loadPage(); });
+els.clearBtn.addEventListener('click',()=>{ els.search.value=''; q=''; offset=0; loadPage(); });
+els.modeBtn.addEventListener('click',()=>{ showUsed=!showUsed; els.modeBtn.textContent = showUsed? 'Mode: Sudah ✓':'Mode: Belum ✗'; els.modeBtn.title = showUsed? 'Tampilkan belum check-in':'Tampilkan sudah check-in'; offset=0; loadPage(); });
+document.addEventListener('keydown',e=>{ if(e.key==='r' && !e.metaKey && !e.ctrlKey){ loadPage(); } });
+// Detect freeze mode from /health
+fetch(API_BASE+'/health').then(r=>r.json()).then(j=>{ if(j && j.mode==='closed'){ EVENT_CLOSED=true; document.getElementById('frozenBadge').style.display='inline-block'; els.login.disabled=true; els.u.disabled=true; els.p.disabled=true; setStatus('READ-ONLY','warn'); } }).catch(()=>{});
+if(load()){ els.loginBox.style.display='none'; els.dataBox.style.display='flex'; els.sessBox.style.display='flex'; els.sess.textContent=adminId; loadPage(); autoCycle(); }
+</script>
+</body></html>

@@ -1,0 +1,49 @@
+/**
+ * For more details on how to configure Wrangler, refer to:
+ * https://developers.cloudflare.com/workers/wrangler/configuration/
+ */
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "registrasi-unz-api",
+	"main": "src/index.ts",
+	"compatibility_date": "2025-09-19",
+	"compatibility_flags": [
+		"global_fetch_strictly_public"
+	],
+
+	"vars": {
+		"SPREADSHEET_ID": "1bIZp6gomXqDcpYqkiVP7WY7PkQCHJAxAlqS0zcddJgs", // legacy, will use SHEET_ID
+		"CORS_ORIGIN": "https://registrasi-unz.web.app",
+		"SHEET_ID": "1bIZp6gomXqDcpYqkiVP7WY7PkQCHJAxAlqS0zcddJgs",
+		"SHEET_NAME": "participants",
+		"EVENT_CLOSED": "1" // freeze: 1=read-only mode
+	},
+	// Secrets to set via `wrangler secret put`:
+	// SHEETS_SA_EMAIL, SHEETS_SA_KEY (with newlines escaped), GATE_API_KEY
+
+	"durable_objects": {
+		"bindings": [
+			{ "name": "CHECKIN_HUB", "class_name": "CheckinHub" }
+		]
+	},
+	"migrations": [
+		{ "tag": "v1_do_checkinhub", "new_sqlite_classes": ["CheckinHub"] }
+	],
+	"triggers": {
+		"crons": ["*/2 * * * *"]
+	},
+
+	"assets": {
+		"directory": "./public"
+	},
+	"observability": {
+		"enabled": true
+	},
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "registrasi_unz",
+			"database_id": "068acf8f-c300-4dc0-9217-a58b00de4bb8"
+		}
+	]
+}

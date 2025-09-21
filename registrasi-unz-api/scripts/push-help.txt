@@ -1,0 +1,5 @@
+# Push Helper (Worker Repo)
+
+cd D:\web\registrasi-unz\registrasi-unz-api
+git remote add origin <YOUR_WORKER_REPO_URL>
+git push -u origin master
