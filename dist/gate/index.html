@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width,initial-scale=1" />
+	<title>Registrasi - Scanner</title>
+	<style>
+		:root {
+			--bg:#0d0f11; --panel:#161a1d; --border:#2a3036; --accent:#1976d2; --accent-grad:linear-gradient(135deg,#1d7fe8,#1257a4); --radius:10px;
+			--ok-bg:#0e4d26; --ok-fg:#b9f6ca; --err-bg:#5d1414; --err-fg:#ffcdd2; --warn-bg:#4d3b10; --warn-fg:#ffecb3;
+			font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+		}
+		*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+		body{margin:0;background:var(--bg);color:#e5eaee;display:flex;flex-direction:column;min-height:100vh}
+		header{padding:.9rem 1rem;display:flex;align-items:center;gap:.75rem;background:#101315;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10}
+		header h1{font-size:1.05rem;margin:0;font-weight:600;letter-spacing:.5px}
+		header .role{font-size:.65rem;padding:.25rem .45rem;border:1px solid var(--border);border-radius:999px;text-transform:uppercase;letter-spacing:.5px;opacity:.8}
+		main{flex:1;display:flex;flex-direction:column;padding:1rem;gap:1rem;max-width:760px;margin:0 auto;width:100%}
+		.panel{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding: .9rem .9rem 1rem;box-shadow:0 4px 14px -6px #000 inset, 0 2px 4px -2px #000}
+		.scan-shell{position:relative;overflow:hidden;border-radius:var(--radius);aspect-ratio:3/4;background:#000;border:1px solid #222}
+		video{width:100%;height:100%;object-fit:cover;display:block}
+		.overlay-corners:before,.overlay-corners:after{content:"";position:absolute;inset:0;border:2px solid rgba(255,255,255,.08);border-radius:var(--radius);pointer-events:none}
+		.controls-row{display:flex;gap:.5rem;flex-wrap:wrap}
+		button{background:var(--accent-grad);border:1px solid #155fab;color:#fff;font-weight:600;font-size:.85rem;letter-spacing:.5px;padding:.65rem 1rem;border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;gap:.4rem;box-shadow:0 2px 4px -1px rgba(0,0,0,.5);transition:.2s}
+		button:active{transform:translateY(1px)}
+		button.secondary{background:#262d33;border-color:#303a42;color:#d0d5d9}
+		button.outline{background:transparent;border:1px solid var(--border);color:#d0d5d9}
+		button.danger{background:#8b1d1d;border-color:#a82828}
+		button:disabled{opacity:.45;filter:saturate(.4);cursor:not-allowed}
+		input{background:#1f2529;border:1px solid #313b42;color:#fff;padding:.65rem .75rem;border-radius:8px;width:100%;font-size:.9rem}
+		input:focus{outline:2px solid #1d71ce;outline-offset:1px}
+		.status{padding:.65rem .75rem;border-radius:8px;font-size:.8rem;font-weight:600;letter-spacing:.5px;display:flex;align-items:center;gap:.5rem;margin-top:.6rem;min-height:42px}
+		.status.ok{background:var(--ok-bg);color:var(--ok-fg)}
+		.status.err{background:var(--err-bg);color:var(--err-fg)}
+		.status.warn{background:var(--warn-bg);color:var(--warn-fg)}
+		.flash{animation:flash .6s ease}
+		@keyframes flash{0%{box-shadow:0 0 0 0 rgba(255,255,255,.6)}100%{box-shadow:0 0 0 40px rgba(255,255,255,0)}}
+		#resultLog{max-height:34vh;overflow:auto;font-size:.72rem;line-height:1.2;background:#1a1f23;border:1px solid #242c32;padding:.6rem .6rem .8rem;border-radius:8px;font-family:ui-monospace,Consolas,monaco,monospace;scrollbar-width:thin}
+		#resultLog div{padding:.25rem .4rem;border-radius:4px}
+		#resultLog div.ok{background:rgba(38,142,81,.25)}
+		#resultLog div.err{background:rgba(177,38,38,.25)}
+		#resultLog div.used{background:rgba(77,122,214,.25)}
+		.muted{opacity:.55;font-size:.65rem}
+		form.auth{display:flex;flex-direction:column;gap:.75rem}
+		label{display:flex;flex-direction:column;gap:.35rem;font-size:.7rem;letter-spacing:.5px;text-transform:uppercase}
+		footer{padding:1rem .75rem .9rem;text-align:center;font-size:.6rem;opacity:.6}
+		.row-gap{display:flex;gap:.55rem}
+		.grow{flex:1}
+		.hidden{display:none !important}
+		@media (min-width:680px){
+			main{flex-direction:row;align-items:flex-start}
+			.layout-left{flex:1;display:flex;flex-direction:column;gap:1rem}
+			.layout-right{width:300px;display:flex;flex-direction:column;gap:1rem}
+			#resultLog{max-height:55vh}
+		}
+	</style>
+</head>
+<body>
+	<header>
+		<h1>Pemeriksaan Tiket</h1>
+		<div id="adminInfo" class="muted"></div>
+		<div id="roleTag" class="role hidden"></div>
+		<button id="logoutBtn" class="outline hidden" style="margin-left:auto;font-size:.6rem;padding:.4rem .7rem">Logout</button>
+	</header>
+	<main>
+		<div class="layout-left">
+			<section id="authSection" class="panel">
+				<form class="auth" id="loginForm">
+					<label>Username<input name="username" autocomplete="username" required /></label>
+					<label>Kata Sandi<input type="password" name="password" autocomplete="current-password" required /></label>
+					<div class="controls-row">
+						<button class="grow" type="submit">Masuk</button>
+					</div>
+					<div id="loginMsg" class="muted"></div>
+				</form>
+			</section>
+			<section id="scanner" class="panel hidden">
+				<div class="scan-shell overlay-corners">
+					<video id="video" playsinline></video>
+				</div>
+				<div class="controls-row" style="margin-top:.6rem">
+					<button id="toggleCamBtn" class="secondary" type="button">Hentikan Kamera</button>
+					<button id="switchCamBtn" class="outline" type="button">Ganti Kamera</button>
+					<button id="clearLogBtn" class="outline" type="button">Bersihkan Log</button>
+					<button id="diagCamBtn" class="outline" type="button">Diagnosa Kamera</button>
+					<button id="uploadQRBtn" class="outline" type="button">Upload QR</button>
+					<button id="forceResetCamBtn" class="outline" type="button">Force Reset</button>
+				</div>
+				<input id="qrFile" type="file" accept="image/*" class="hidden" />
+				<div class="row-gap" style="margin-top:.6rem">
+					<input id="manualCode" placeholder="Scan atau tempel kode / URL" />
+					<button id="validateBtn" type="button">Periksa</button>
+				</div>
+				<div class="controls-row" style="margin-top:.5rem">
+					<button id="markBtn" class="secondary" type="button" disabled>Tandai Hadir</button>
+				</div>
+				<div id="scanStatus" class="status">Siap</div>
+			</section>
+		</div>
+		<div class="layout-right">
+			<section class="panel" style="flex:1;display:flex;flex-direction:column;min-height:200px">
+				<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.4rem">
+					<strong style="font-size:.75rem;letter-spacing:.5px;opacity:.75">LOG</strong>
+					<span id="logCount" class="muted"></span>
+				</div>
+				<div id="resultLog" style="flex:1"></div>
+			</section>
+		</div>
+	</main>
+	<footer>v1 Gate UI • Kamera aktif <span id="camState">ya</span></footer>
+	<script src="app.js" type="module"></script>
+</body>
+</html>

@@ -1,0 +1,8 @@
+# Initialize Frontend Hosting Repo
+
+cd D:\web\registrasi-unz
+git init
+git add -A
+git commit -m "init: hosting site"
+git remote add origin <YOUR_FRONTEND_REPO_URL>
+git push -u origin master
