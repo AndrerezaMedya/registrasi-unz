@@ -156,7 +156,11 @@ export default {
 
     // WebSocket upgrade path (proxy to DO): /ws?token=... (disabled if closed)
     if (url.pathname === '/ws') {
-      if (eventClosed) return stdError('EVENT_CLOSED','Event closed', undefined, 410, corsOrigin);
+      if (eventClosed) {
+        console.log(`[FREEZE] Blocking /ws request from ${getIP(request)}`);
+        return stdError('EVENT_CLOSED','Event closed', undefined, 410, corsOrigin);
+      }
+      console.log(`[WS] Handling /ws request from ${getIP(request)}`);
       let admin_id: string | null = null;
       const tokenParam = url.searchParams.get('token');
       if (tokenParam) {

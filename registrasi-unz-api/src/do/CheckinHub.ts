@@ -1,3 +1,5 @@
+import { Env } from '../types.js';
+
 export interface CheckinMessage {
   code: string;
   name?: string;
@@ -34,6 +36,10 @@ export class CheckinHub implements DurableObject {
 
   async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url);
+    if (this.env.EVENT_CLOSED === '1') {
+      console.log(`[DO FREEZE] Blocking DO request for ${url.pathname}`);
+      return new Response('Event closed', { status: 410 });
+    }
     if (url.pathname === '/ws') {
       if (request.headers.get('Upgrade') !== 'websocket') {
         return new Response('Expected websocket', { status: 400 });
@@ -59,6 +65,7 @@ export class CheckinHub implements DurableObject {
     // POST /broadcast {code,name,used_at,result}
     if (request.method === 'POST' && url.pathname === '/broadcast') {
       const data = await request.json<CheckinMessage>().catch(() => ({} as CheckinMessage));
+      console.log(`[DO] Handling /broadcast for code: ${data.code}`);
       if (!data.code) return new Response('Missing code', { status: 400 });
       this.broadcast(data);
       return new Response(JSON.stringify({ ok: true }), { headers: { 'Content-Type': 'application/json' } });
