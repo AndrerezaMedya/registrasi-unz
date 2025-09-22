@@ -50,6 +50,7 @@ Menghentikan perubahan data dan mengurangi konsumsi resource (Durable Object & s
 - Variabel lingkungan Cloudflare tidak bisa diubah tanpa redeploy (immutable pada runtime). Itulah alasan toggling memerlukan redeploy.
 - Jika kelak diperlukan toggle runtime tanpa deploy, perlu storage terpisah (mis. D1 mini table / Durable Object state) + endpoint admin khusus (belum diimplementasi karena tidak diminta).
 - Status kode yang dipakai untuk penolakan: `410 Gone` (dapat diubah menjadi `403 Forbidden` jika diinginkan).
+- Durable Object sepenuhnya dihentikan dengan check internal di handler DO dan logging debug untuk monitoring penggunaan saat freeze.
 
 ## Dampak Terhadap Data
 
@@ -67,6 +68,7 @@ Tidak ada migrasi atau perubahan skema; hanya guard logic. Data tetap dapat diek
 | Badge tidak muncul di dashboard statis | Cache CDN / browser                          | Hard refresh (Ctrl+F5) / purge cache                          |
 | `/health` masih open setelah set var   | Deploy belum dijalankan atau var salah ejaan | Periksa `wrangler.jsonc` dan ulangi deploy                    |
 | Masih bisa login                       | Versi worker lama masih aktif                | Tunggu propagasi atau cek environment (staging vs production) |
+| Masih ada penggunaan DO saat freeze    | Check internal belum aktif atau log error    | Periksa Cloudflare logs untuk `[FREEZE]` atau `[DO FREEZE]` messages |
 
 ## Audit Cepat (Checklist)
 
