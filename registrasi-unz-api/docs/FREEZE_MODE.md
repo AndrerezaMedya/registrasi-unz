@@ -63,11 +63,11 @@ Tidak ada migrasi atau perubahan skema; hanya guard logic. Data tetap dapat diek
 
 ## Troubleshooting
 
-| Masalah                                | Penyebab Umum                                | Solusi                                                        |
-| -------------------------------------- | -------------------------------------------- | ------------------------------------------------------------- |
-| Badge tidak muncul di dashboard statis | Cache CDN / browser                          | Hard refresh (Ctrl+F5) / purge cache                          |
-| `/health` masih open setelah set var   | Deploy belum dijalankan atau var salah ejaan | Periksa `wrangler.jsonc` dan ulangi deploy                    |
-| Masih bisa login                       | Versi worker lama masih aktif                | Tunggu propagasi atau cek environment (staging vs production) |
+| Masalah                                | Penyebab Umum                                | Solusi                                                               |
+| -------------------------------------- | -------------------------------------------- | -------------------------------------------------------------------- |
+| Badge tidak muncul di dashboard statis | Cache CDN / browser                          | Hard refresh (Ctrl+F5) / purge cache                                 |
+| `/health` masih open setelah set var   | Deploy belum dijalankan atau var salah ejaan | Periksa `wrangler.jsonc` dan ulangi deploy                           |
+| Masih bisa login                       | Versi worker lama masih aktif                | Tunggu propagasi atau cek environment (staging vs production)        |
 | Masih ada penggunaan DO saat freeze    | Check internal belum aktif atau log error    | Periksa Cloudflare logs untuk `[FREEZE]` atau `[DO FREEZE]` messages |
 
 ## Audit Cepat (Checklist)
